@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
         time.sleep(2)
         c.getDistances()
-        time.sleep(2)
+        time.sleep(7)
         c.writeCache('dolphin', '30')
         dol = c.readCache('dolphin')
 
@@ -25,6 +25,7 @@ if __name__ == "__main__":
 
         #c.getDistances()
 
-    except:
+    except Exception as e:
+        print(e)
         c.destroySockets()
 
