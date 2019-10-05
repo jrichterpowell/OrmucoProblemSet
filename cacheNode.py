@@ -1,9 +1,9 @@
-import socket,random, time
+import socket,random, time, selectors
 
 class Node:
     def __init__(self, cap, name='alpha', port=6555, position=(0,0)):
         self.store = dict()
-        self.ttl = 1 #objects in cache live for 1 minute
+        self.ttl = 0.25 #objects in cache live for 1 minute
         self.cap = cap
         self.size = 0
         self.delim = '&&&&&'
@@ -17,9 +17,10 @@ class Node:
     def cleanCache(self):
         #get the current time, remove entries that are older than the time to live
         curtime = time.time()
-        for key in self.store.keys():
+        keys = list(self.store.keys())
+        for key in keys:
             if self.store[key][1] + (60*self.ttl) < curtime:
-                print("Removed stale entry:", key)
+                print("Node", self.name, "Removed stale entry:", key, flush=True)
                 del self.store[key]
 
     def respondToPing(self, x, y):
@@ -28,7 +29,9 @@ class Node:
         distance = (x - self.position[0])**2 + (y - self.position[1])**2
         print("Distance from origin: ", distance, "for node", self.name, flush=True)
         time.sleep(distance / 1000)
+        
         return 
+
 
     def dropLRU(self):
         LRU = self.order.pop()
@@ -62,43 +65,60 @@ class Node:
         else:
             return None
 
+    def respond(self, sel, key, mask):
+        connection = key.fileobj
+
+        if not mask & selectors.EVENT_READ:
+            return 
+        requests = repr(connection.recv(4096))[2:-1] #drop the bytes prefix and 
+        if not requests:
+            return
+
+        print("Node", self.name, "receved: ", requests.replace(self.delim, ''))
+        for request in requests.split(self.delim):
+            if request == '':
+                continue
+            reqArgs = request.split('|')
+            if reqArgs[0] == "dist":
+                self.respondToPing(int(reqArgs[1]), int(reqArgs[2]))
+                connection.sendall(b'pong')
+            elif reqArgs[0] == "write":
+                self.writeToCache(reqArgs[1], reqArgs[2]))
+                #connection.sendall(bytes('Wrote {} to {}'.format(reqArgs[2],reqArgs[1]), encoding='utf-8'))
+            elif reqArgs[0] == 'read':
+                item = self.readFromCache(reqArgs[1])
+                if item:
+                    connection.sendall(bytes(item, encoding=utf-8))
+                else:
+                    connection.sendall(b"Key Not Found")
+            else:
+                connection.sendall(b"Request Not Understood")
+
+    def handleNewConn(self, sel, key, mask):
+        connection, _ = key.fileobj.accept()
+        connection.setblocking(False)
+
+        events = selectors.EVENT_READ | selectors.EVENT_WRITE
+        sel.register(connection, events, data=self.respond)
+
     def serve(self):
         print("Running node")
         #simple socket server which returns the requested cache element if it exist
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.bind(('127.0.0.1', self.port))
             sock.listen()
-            connection, addr = sock.accept()
-            connection.setblocking(False)
+            sock.setblocking(False)
+            sel = selectors.DefaultSelector()
+            sel.register(sock, selectors.EVENT_READ, data=self.handleNewConn)
+
             while True: 
-                try:
-                    requests = repr(connection.recv(4096))[2:-1] #drop the bytes prefix and 
-                    self.cleanCache()
-                    if not requests:
-                        print('Node: ', self.name, ' dead connection')
-                        raise Exception
-                    print("Node", self.name, "receved: ", requests.replace(self.delim, ''))
-                    for request in requests.split(self.delim):
-                        if request == '':
-                            continue
-                        reqArgs = request.split('|')
-                        print(reqArgs)
-                        if reqArgs[0] == "dist":
-                            self.respondToPing(int(reqArgs[1]), int(reqArgs[2]))
-                            connection.sendall(b'pong')
-                        elif reqArgs[0] == "write":
-                            self.writeToCache(reqArgs[1], int(reqArgs[2]))
-                            #connection.sendall(bytes('Wrote {} to {}'.format(reqArgs[2],reqArgs[1]), encoding='utf-8'))
-                        elif reqArgs[0] == 'read':
-                            item = self.readFromCache(reqArgs[1])
-                            if item:
-                                connection.sendall(item.to_bytes(8, "big"))
-                            else:
-                                connection.sendall(b"Key Not Found")
-                        else:
-                            connection.sendall(b"Request Not Understood")
-                except:
-                    connection, addr = sock.accept()
-                    connection.setblocking(False)
-                    self.cleanCache()
-                    time.sleep(1)
+                self.cleanCache()
+                events = sel.select(timeout=1)
+                for key, mask in events:
+                    callback = key.data
+                    callback(sel, key, mask)
+
+                time.sleep(0.1)
+            
+
+

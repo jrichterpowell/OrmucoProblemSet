@@ -10,22 +10,18 @@ ports  = [i for i in range(6555,6575)]
 nodes = [Node(5,clusterNames[i], ports[i], position=(random.randint(-10,10), random.randint(-10,10))) for i in range(20)]
 if __name__ == "__main__":
     c = CacheClient(nodes=[node.port for node in nodes])
-    try:
-        threads = [Thread(target = node.serve, args = ()) for node in nodes]
-        for thread in threads:
-            thread.start() 
 
-        time.sleep(2)
-        c.getDistances()
-        time.sleep(7)
-        c.writeCache('dolphin', '30')
-        dol = c.readCache('dolphin')
+    threads = [Thread(target = node.serve, args = ()) for node in nodes]
+    for thread in threads:
+        thread.start() 
 
-        print("Dolphin is: ", dol)
+    time.sleep(2)
+    c.getDistances()
+    time.sleep(7)
+    c.writeCache('dolphin', '30')
+    dol = c.readCache('dolphin')
 
-        #c.getDistances()
+    print("Dolphin is: ", dol)
 
-    except Exception as e:
-        print(e)
-        c.destroySockets()
+    c.getDistances()
 
