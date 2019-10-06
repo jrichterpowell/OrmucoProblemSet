@@ -1,16 +1,36 @@
+# Explanation for Q1
+`python question1.py x0 x1 x2 x3`
+This program is fairly self explanatory. It easy to see that if I and J are two intervals, the boolean condition for their intersection being non-empty can be expressed as either the right or left endpoint of I lies inside J, or J is contained inside I. 
+
+# Explanation for Q2
+Run with 
+`python question2.py`
+To compare strings alphabetically, we need to move character by character. Thus we compare the first character of each string, and if the first is larger than the second, or vice-versa, we stop since we know the order. Otherwise we continue on to the second character and repeat the same operation, etc. Importantly we treat a shorter string as 'less', since a space usually is considered less than any character. If we repeat for the whole string and have equality in each character, then the strings must be equal. 
+
+I wrote a tester to generate 100 random strings using encoded numbers, so we know the correct order apriori. 
 
 # Explanation for Q3
 
 ## Overview
+Run with 
+`python question3/clusterTester.py`
 The solution to this problem is composed of 2 parts 
 1. The cache nodes
 2. The client node(s)
 
 The cache nodes essentially run a very simple server, which accepts requests from the clients in a simple message protocol, then services them if they are valid. 
 
-The client node is in theory our car or mobile device which is requesting the data from the network.
+The client node is in theory our car or mobile device which is requesting the data from the network. 
 
 The main idea is to use the cache nodes as minature data stores, which in practice would store the cache in memory and thus be able to serve requests extremely quickly. 
+
+The output is very verbose since it describes exactly what all the nodes are doing, but I actually find this more helpful even if it isn't elgant; seeing all the nodes process the inputs helps demonstrate how the system works as a whole. 
+
+## Reliability 
+This cache design will tolerate a network failure since the client is designed to keep track of write commands that fail to send, and re-send them in a seperate thread on a one minute loop. Reads are not resent since the result of a failed read (without any local memory) is immediately apparent and can be handled in the application. The client could also (which I wanted to do but sadly need to go study) implement an internal cache which could serve as a 1st level local buffer, only calling out to the other nodes if the key is not found. 
+
+The client also timesouts connections after 5 seconds to prevent hanging in the event one of the nodes dies. 
+
 
 ## Data Consistency
 To tackle data consistency, I opted to make the protocol write-to-all. I.e. when a write is requested by the client, the write is sent to all nodes. If the cache is full, by nature of a LRU design, each will dump the least recently used block in that node. 
