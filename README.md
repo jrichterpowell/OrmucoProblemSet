@@ -1,10 +1,12 @@
 # Explanation for Q1
-`python question1.py x0 x1 x2 x3`
+Run with `python question1.py x0 x1 x2 x3`
+
 This program is fairly self explanatory. It easy to see that if I and J are two intervals, the boolean condition for their intersection being non-empty can be expressed as either the right or left endpoint of I lies inside J, or J is contained inside I. 
 
 # Explanation for Q2
 Run with 
 `python question2.py`
+
 To compare strings alphabetically, we need to move character by character. Thus we compare the first character of each string, and if the first is larger than the second, or vice-versa, we stop since we know the order. Otherwise we continue on to the second character and repeat the same operation, etc. Importantly we treat a shorter string as 'less', since a space usually is considered less than any character. If we repeat for the whole string and have equality in each character, then the strings must be equal. 
 
 I wrote a tester to generate 100 random strings using encoded numbers, so we know the correct order apriori. 
@@ -14,6 +16,7 @@ I wrote a tester to generate 100 random strings using encoded numbers, so we kno
 ## Overview
 Run with 
 `python question3/clusterTester.py`
+
 The solution to this problem is composed of 2 parts 
 1. The cache nodes
 2. The client node(s)
